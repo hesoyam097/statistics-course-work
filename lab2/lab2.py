@@ -11,22 +11,25 @@ def generate_exponential_sample(lam, size):
     """Генерує вибірку з показникового розподілу з параметром lam"""
     return np.random.exponential(scale=1/lam, size=size)
 
+
 # Функція для перетворення показникового розподілу в рівномірний
 def transform_to_uniform(x, lam):
     """Перетворює показниковий розподіл в рівномірний за формулою F(x)=1-e^(-lambda*x)"""
     return 1 - np.exp(-lam * x)
+
 
 # Функція для генерації вибірки з рівномірного розподілу
 def generate_uniform_sample(size):
     """Генерує вибірку з рівномірного розподілу на [0,1]"""
     return np.random.uniform(0, 1, size=size)
 
+
 # Розміри вибірок для тестування
-sample_sizes = [20, 60, 100]
+sample_sizes = [1000, 10000, 100000]
 
 # Параметри розподілів
-lambda_true = 2
-lambda_false = 3
+lambda_true = 1
+lambda_false = 1.2
 
 # Завдання 1: Критерій Колмогорова
 def kolmogorov_test(sample, distribution_func, params=None):
