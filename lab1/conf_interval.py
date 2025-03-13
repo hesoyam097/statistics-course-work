@@ -12,7 +12,6 @@ DEV = 1
 
 
 
-
 def confidence_interval_1(values, N) -> tuple:
     t_value = calc_critical_t_value((1 + CONFIDENCE_LEVEL) / 2, N - 1)
     mean_value = calc_mean(values, N)
@@ -46,14 +45,24 @@ for N in N_s:
     
     confidence_interval1 = confidence_interval_1(values, N)
     print(confidence_interval1)
+    plt.hist(values, 100)
+    plt.axvline(confidence_interval1[0], color='k', linestyle='dashed', linewidth=1)
+    plt.axvline(confidence_interval1[1], color='k', linestyle='dashed', linewidth=1)
+    plt.show()
+    
     confidence_interval2 = confidence_interval_2(values, N)
     print(confidence_interval2)
+    plt.hist(values, 100)
+    plt.axvline(confidence_interval2[0], color='k', linestyle='dashed', linewidth=1)
+    plt.axvline(confidence_interval2[1], color='k', linestyle='dashed', linewidth=1)
+    plt.show()
+    
     confidence_interval3 = confidence_interval_3(values, N)
     print(confidence_interval3)
+    plt.hist(values, 100)
+    plt.axvline(confidence_interval3[0], color='k', linestyle='dashed', linewidth=1)
+    plt.axvline(confidence_interval3[1], color='k', linestyle='dashed', linewidth=1)
+    plt.show()
     
-    # plt.hist(values, 100)
-    # plt.axvline(confidence_interval[0], color='k', linestyle='dashed', linewidth=1)
-    # plt.axvline(confidence_interval[1], color='k', linestyle='dashed', linewidth=1)
-    # plt.show()
 
 
