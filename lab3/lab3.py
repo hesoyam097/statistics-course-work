@@ -208,3 +208,134 @@ def inversion_test(X):
         "critical_value": critical_value,
         "result": result
     }
+
+# Головна функція для запуску всіх тестів та виведення результатів
+def main():
+    # Встановлюємо seed для відтворюваності результатів
+    np.random.seed(42)
+    
+    print("=" * 80)
+    print("ЛАБОРАТОРНА РОБОТА №3: ПЕРЕВІРКА СТАТИСТИЧНИХ ГІПОТЕЗ")
+    print("=" * 80)
+    
+    # Завдання 1: Перевірка гіпотези однорідності
+    print("\n" + "=" * 80)
+    print("ЗАВДАННЯ 1: ПЕРЕВІРКА ГІПОТЕЗИ ОДНОРІДНОСТІ (КРИТЕРІЙ ПУСТИХ БЛОКІВ)")
+    print("=" * 80)
+    
+    # Генеруємо вибірки X ~ U(0,1) та Y ~ U(0,2)
+    n1 = 100
+    n2 = 100
+    X = np.random.uniform(0, 1, n1)
+    Y = np.random.uniform(0, 2, n2)
+    
+    # Параметри для тестів
+    test_params = [
+        {"m": 10, "k": 5},
+        {"m": 20, "k": 10},
+        {"m": 50, "k": 2}
+    ]
+    
+    for i, params in enumerate(test_params):
+        m, k = params["m"], params["k"]
+        print(f"\nТест {i+1}: m = {m}, k = {k}")
+        
+        result = empty_blocks_test(X, Y, m, k)
+        
+        print(f"Кількість пустих блоків (mu): {result['mu']:.4f}")
+        print(f"Очікувана кількість пустих блоків (E_mu): {result['E_mu']:.4f}")
+        print(f"Дисперсія (D_mu): {result['D_mu']:.4f}")
+        print(f"Статистика U: {result['U']:.4f}")
+        print(f"Критичне значення: {result['critical_value']:.4f}")
+        print(f"Висновок: {result['result']}")
+    
+    # Завдання 2: Перевірка гіпотези незалежності
+    print("\n" + "=" * 80)
+    print("ЗАВДАННЯ 2: ПЕРЕВІРКА ГІПОТЕЗИ НЕЗАЛЕЖНОСТІ")
+    print("=" * 80)
+    
+    sample_sizes = [10, 50, 100]
+    test_cases = ['a', 'b']
+    
+    for case in test_cases:
+        print(f"\nВипадок {case.upper()}:")
+        if case == 'a':
+            print("Y = X + eps, де eps ~ U(0, 0.2)")
+        else:
+            print("Y = X^2 + eps, де eps ~ U(0, 0.2)")
+        
+        for n in sample_sizes:
+            print(f"\nРозмір вибірки: {n}")
+            
+            X, Y = generate_dependent_sample(n, case)
+            
+            # Візуалізація даних
+            plt.figure(figsize=(10, 5))
+            plt.subplot(1, 2, 1)
+            plt.scatter(X, Y, alpha=0.7)
+            plt.title(f"Діаграма розсіювання (n={n})")
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.grid(True)
+            
+            plt.subplot(1, 2, 2)
+            plt.hist2d(X, Y, bins=20, cmap='Blues')
+            plt.title(f"Двовимірна гістограма (n={n})")
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.colorbar(label='Частота')
+            
+            plt.tight_layout()
+            plt.savefig(f"./imgs/scatterplot_{case}_{n}.png")
+            plt.close()
+            
+            print("A. Критерій Спірмена:")
+            spearman_result = spearman_test(X, Y)
+            print(f"   Коефіцієнт кореляції Спірмена (rho): {spearman_result['rho']:.4f}")
+            print(f"   Статистика T: {spearman_result['T']:.4f}")
+            print(f"   Критичне значення: {spearman_result['critical_value']:.4f}")
+            print(f"   p-значення: {spearman_result['p_value']:.4f}")
+            print(f"   Висновок: {spearman_result['result']}")
+            
+            print("\nB. Критерій Кендалла:")
+            kendall_result = kendall_test(X, Y)
+            print(f"   Коефіцієнт кореляції Кендалла (tau): {kendall_result['tau']:.4f}")
+            print(f"   Статистика Z: {kendall_result['Z']:.4f}")
+            print(f"   Критичне значення: {kendall_result['critical_value']:.4f}")
+            print(f"   p-значення: {kendall_result['p_value']:.4f}")
+            print(f"   Висновок: {kendall_result['result']}")
+    
+    # Завдання 3: Перевірка гіпотези випадковості
+    print("\n" + "=" * 80)
+    print("ЗАВДАННЯ 3: ПЕРЕВІРКА ГІПОТЕЗИ ВИПАДКОВОСТІ (КРИТЕРІЙ ІНВЕРСІЙ)")
+    print("=" * 80)
+    
+    a_values = [0, 0.5, 0.9]
+    n = 100
+    
+    for a in a_values:
+        print(f"\nПараметр a = {a}")
+        X = generate_sample_task3(n, a)
+        
+        # Візуалізація послідовності
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(n), X, 'o-', alpha=0.7)
+        plt.title(f"Послідовність X при a = {a}")
+        plt.xlabel('Індекс i')
+        plt.ylabel('X_i')
+        plt.grid(True)
+        plt.savefig(f"./imgs/sequence_a{a}.png")
+        plt.close()
+        
+        # Тест на випадковість
+        result = inversion_test(X)
+        print(f"Кількість інверсій (A): {result['A']}")
+        print(f"Очікувана кількість інверсій (E_A): {result['E_A']:.4f}")
+        print(f"Дисперсія (D_A): {result['D_A']:.4f}")
+        print(f"Статистика Z: {result['Z']:.4f}")
+        print(f"Критичне значення: {result['critical_value']:.4f}")
+        print(f"Висновок: {result['result']}")
+
+# Викликаємо головну функцію
+if __name__ == "__main__":
+    main()
