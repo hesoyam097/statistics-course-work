@@ -246,7 +246,7 @@ def main():
             plt.xlabel("X")
             plt.ylabel("Y")
             plt.grid(True)
-            plt.savefig(f"scatter_{case}_{n}.png")
+            plt.savefig(f"./imgs/scatter_{case}_{n}.png")
             plt.close()
             
             # Критерій Спірмена
