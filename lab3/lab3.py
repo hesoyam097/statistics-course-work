@@ -7,142 +7,130 @@ import math
 alpha = 0.05
 
 # Завдання 1: Перевірка гіпотези однорідності (критерій пустих блоків)
-def empty_blocks_test(X, Y, m, k):
+def empty_blocks_test(n, m):
     """
-    Критерій пустих блоків для перевірки гіпотези однорідності
-    X, Y - вибірки
-    m - кількість блоків
-    k - розмір блоку
+    Performs the empty blocks test for homogeneity.
+    
+    Parameters:
+    n - sample size for X (Exp(1))
+    m - sample size for Y (Exp(1.2))
     """
-    # Об'єднуємо вибірки
-    Z = np.concatenate((X, Y))
-    n = len(Z)
+    # Generate samples
+    X = np.random.exponential(scale=1.0, size=n)     # Exp(1)
+    Y = np.random.exponential(scale=1/1.2, size=m)   # Exp(1.2)
 
-    # Сортуємо об'єднану вибірку
+    # Merge and sort the samples
+    Z = np.concatenate((X, Y))
     Z_sorted = np.sort(Z)
 
-    # Розбиваємо на m блоків
+    # Divide into m blocks
     blocks = np.array_split(Z_sorted, m)
 
-    # Рахуємо кількість пустих блоків (блоків без елементів з Y)
-    mu = 0
-    for block in blocks:
-        # Блок вважається пустим, якщо в ньому немає елементів з Y
-        if not any(np.isin(block, Y)):
-            mu += 1
+    # Count empty blocks (blocks that contain only X values)
+    empty_count = sum(all(val in X for val in block) for block in blocks)
 
-    # Обчислюємо статистику критерію
-    n1 = len(X)
-    n2 = len(Y)
-    p = n1 / n
-    q = n2 / n
-
-    # Математичне сподівання та дисперсія для mu при справедливості H0
-    E_mu = m * (p ** k)
-    D_mu = m * (p ** k) * (1 - p ** k)
-
-    # Нормована статистика
-    if D_mu > 0:
-        U = (mu - E_mu) / np.sqrt(D_mu)
+    # Compute test statistic
+    p = n / (n + m)
+    expected_empty = m * (p ** (n / m))
+    variance_empty = m * (p ** (n / m)) * (1 - p ** (n / m))
+    
+    if variance_empty > 0:
+        U = (empty_count - expected_empty) / np.sqrt(variance_empty)
     else:
         U = 0
 
-    # Критичне значення для двостороннього тесту
-    critical_value = stats.norm.ppf(1 - alpha/2)
+    # Critical value for a two-tailed test
+    critical_value = stats.norm.ppf(1 - alpha / 2)
 
-    # Перевірка гіпотези
+    # Hypothesis test result
     if abs(U) > critical_value:
-        result = "Відхиляємо H0 (вибірки не однорідні)"
+        result = "Reject H0 (samples are not homogeneous)"
     else:
-        result = "Не відхиляємо H0 (вибірки однорідні)"
+        result = "Fail to reject H0 (samples are homogeneous)"
 
     return {
-        "mu": mu,
-        "E_mu": E_mu,
-        "D_mu": D_mu,
-        "U": U,
-        "critical_value": critical_value,
-        "result": result
+        "Empty Blocks Count": empty_count,
+        "Expected Empty Blocks": expected_empty,
+        "Variance": variance_empty,
+        "Test Statistic U": U,
+        "Critical Value": critical_value,
+        "Result": result
     }
 
 # Завдання 2: Перевірка гіпотези незалежності
-def generate_dependent_sample(n, case):
+def generate_sample(n, case):
     """
-    Генерує вибірку (X, Y) за заданим правилом
+    Генерує вибірку (X, Y) за заданим правилом відповідно до завдання.
+    
+    Параметри:
+    n - розмір вибірки
+    case - 'a' або 'b', що визначає метод генерації Y
     """
-    X = np.random.uniform(0, 1, n)
+    X = np.random.uniform(0, 1, n)  # X ~ U(0,1)
+    eta = np.random.uniform(-1, 1, n)  # eta ~ U(-1,1)
 
     if case == 'a':
-        # Випадок а): Y = X + eps, eps ~ U(0, 0.2)
-        eps = np.random.uniform(0, 0.2, n)
-        Y = X + eps
-        Y = np.minimum(Y, 1)  # Нормалізуємо Y до [0, 1]
+        Y = X * eta  # Випадок (а): Y = X * η
     elif case == 'b':
-        # Випадок b): Y = X^2 + eps, eps ~ U(0, 0.2)
-        eps = np.random.uniform(0, 0.2, n)
-        Y = X**2 + eps
-        Y = np.minimum(Y, 1)  # Нормалізуємо Y до [0, 1]
+        Y = X + eta  # Випадок (б): Y = X + η
 
     return X, Y
 
-def spearman_test(X, Y):
+def spearman_rank_correlation(X, Y):
     """
-    Критерій Спірмена для перевірки гіпотези незалежності
+    Обчислення коефіцієнта кореляції Спірмена вручну.
     """
     n = len(X)
 
-    # Обчислюємо коефіцієнт кореляції Спірмена
-    rho, p_value = stats.spearmanr(X, Y)
+    # Ранжування X та Y
+    rank_X = np.argsort(np.argsort(X)) + 1
+    rank_Y = np.argsort(np.argsort(Y)) + 1
 
-    # Статистика критерію
+    # Обчислення різниці рангів
+    d = rank_X - rank_Y
+
+    # Обчислення коефіцієнта Спірмена
+    rho = 1 - (6 * np.sum(d**2)) / (n * (n**2 - 1))
+
+    # Статистика Спірмена
     T = rho * np.sqrt(n - 2) / np.sqrt(1 - rho**2)
+    critical_value = stats.norm.ppf(1 - alpha / 2)
 
-    # Критичне значення для двостороннього тесту
-    critical_value = stats.t.ppf(1 - alpha/2, n - 2)
+    result = "Відхиляємо H0 (змінні залежні)" if abs(T) > critical_value else "Не відхиляємо H0 (змінні незалежні)"
+    
+    return {"rho": rho, "T": T, "critical_value": critical_value, "result": result}
 
-    # Перевірка гіпотези
-    if abs(T) > critical_value:
-        result = "Відхиляємо H0 (змінні залежні)"
-    else:
-        result = "Не відхиляємо H0 (змінні незалежні)"
-
-    return {
-        "rho": rho,
-        "T": T,
-        "critical_value": critical_value,
-        "p_value": p_value,
-        "result": result
-    }
-
-def kendall_test(X, Y):
+def kendall_tau_correlation(X, Y):
     """
-    Критерій Кендалла для перевірки гіпотези незалежності
+    Обчислення коефіцієнта кореляції Кендалла вручну.
     """
     n = len(X)
+    concordant = 0
+    discordant = 0
 
-    # Обчислюємо коефіцієнт кореляції Кендалла
-    tau, p_value = stats.kendalltau(X, Y)
+    # Перевіряємо всі пари (i, j)
+    for i in range(n):
+        for j in range(i + 1, n):
+            sign_x = np.sign(X[j] - X[i])
+            sign_y = np.sign(Y[j] - Y[i])
 
-    # Статистика критерію
-    sigma_tau = np.sqrt((2 * (2*n + 5)) / (9 * n * (n - 1)))
+            if sign_x * sign_y > 0:
+                concordant += 1  # Узгоджена пара
+            elif sign_x * sign_y < 0:
+                discordant += 1  # Неузгоджена пара
+
+    # Обчислення коефіцієнта τ (tau)
+    tau = (concordant - discordant) / (0.5 * n * (n - 1))
+
+    # Обчислення статистики Z
+    sigma_tau = np.sqrt((2 * (2 * n + 5)) / (9 * n * (n - 1)))
     Z = tau / sigma_tau
+    critical_value = stats.norm.ppf(1 - alpha / 2)
 
-    # Критичне значення для двостороннього тесту
-    critical_value = stats.norm.ppf(1 - alpha/2)
+    result = "Відхиляємо H0 (змінні залежні)" if abs(Z) > critical_value else "Не відхиляємо H0 (змінні незалежні)"
+    
+    return {"tau": tau, "Z": Z, "critical_value": critical_value, "result": result}
 
-    # Перевірка гіпотези
-    if abs(Z) > critical_value:
-        result = "Відхиляємо H0 (змінні залежні)"
-    else:
-        result = "Не відхиляємо H0 (змінні незалежні)"
-
-    return {
-        "tau": tau,
-        "Z": Z,
-        "critical_value": critical_value,
-        "p_value": p_value,
-        "result": result
-    }
 
 # Завдання 3: Перевірка гіпотези випадковості
 def generate_sample_task3(n, a):
@@ -223,86 +211,58 @@ def main():
     print("ЗАВДАННЯ 1: ПЕРЕВІРКА ГІПОТЕЗИ ОДНОРІДНОСТІ (КРИТЕРІЙ ПУСТИХ БЛОКІВ)")
     print("=" * 80)
     
-    # Генеруємо вибірки X ~ U(0,1) та Y ~ U(0,2)
-    n1 = 100
-    n2 = 100
-    X = np.random.uniform(0, 1, n1)
-    Y = np.random.uniform(0, 2, n2)
-    
-    # Параметри для тестів
-    test_params = [
-        {"m": 10, "k": 5},
-        {"m": 20, "k": 10},
-        {"m": 50, "k": 2}
-    ]
-    
-    for i, params in enumerate(test_params):
-        m, k = params["m"], params["k"]
-        print(f"\nТест {i+1}: m = {m}, k = {k}")
-        
-        result = empty_blocks_test(X, Y, m, k)
-        
-        print(f"Кількість пустих блоків (mu): {result['mu']:.4f}")
-        print(f"Очікувана кількість пустих блоків (E_mu): {result['E_mu']:.4f}")
-        print(f"Дисперсія (D_mu): {result['D_mu']:.4f}")
-        print(f"Статистика U: {result['U']:.4f}")
-        print(f"Критичне значення: {result['critical_value']:.4f}")
-        print(f"Висновок: {result['result']}")
+    sample_sizes = [(500, 1000), (5000, 10000), (50000, 100000)]
+    for n, m in sample_sizes:
+        print(f"n = {n}, m = {m}")
+        result = empty_blocks_test(n, m)
+        for key, value in result.items():
+            print(f"{key}: {value}")
+        print("-" * 50)
     
     # Завдання 2: Перевірка гіпотези незалежності
     print("\n" + "=" * 80)
     print("ЗАВДАННЯ 2: ПЕРЕВІРКА ГІПОТЕЗИ НЕЗАЛЕЖНОСТІ")
     print("=" * 80)
     
-    sample_sizes = [10, 50, 100]
+    sample_sizes = [500, 5000, 50000]  # Розміри вибірки згідно з умовою завдання
     test_cases = ['a', 'b']
     
     for case in test_cases:
-        print(f"\nВипадок {case.upper()}:")
+        print(f"\n=== Випадок {case.upper()} ===")
         if case == 'a':
-            print("Y = X + eps, де eps ~ U(0, 0.2)")
+            print("Y = X * η, де η ~ U(-1,1)")
         else:
-            print("Y = X^2 + eps, де eps ~ U(0, 0.2)")
+            print("Y = X + η, де η ~ U(-1,1)")
         
         for n in sample_sizes:
             print(f"\nРозмір вибірки: {n}")
             
-            X, Y = generate_dependent_sample(n, case)
+            X, Y = generate_sample(n, case)
             
-            # Візуалізація даних
+            # Візуалізація
             plt.figure(figsize=(10, 5))
-            plt.subplot(1, 2, 1)
-            plt.scatter(X, Y, alpha=0.7)
-            plt.title(f"Діаграма розсіювання (n={n})")
-            plt.xlabel('X')
-            plt.ylabel('Y')
+            plt.scatter(X, Y, alpha=0.5)
+            plt.title(f"Діаграма розсіювання (n={n}, випадок {case.upper()})")
+            plt.xlabel("X")
+            plt.ylabel("Y")
             plt.grid(True)
-            
-            plt.subplot(1, 2, 2)
-            plt.hist2d(X, Y, bins=20, cmap='Blues')
-            plt.title(f"Двовимірна гістограма (n={n})")
-            plt.xlabel('X')
-            plt.ylabel('Y')
-            plt.colorbar(label='Частота')
-            
-            plt.tight_layout()
-            plt.savefig(f"./imgs/scatterplot_{case}_{n}.png")
+            plt.savefig(f"scatter_{case}_{n}.png")
             plt.close()
             
-            print("A. Критерій Спірмена:")
-            spearman_result = spearman_test(X, Y)
-            print(f"   Коефіцієнт кореляції Спірмена (rho): {spearman_result['rho']:.4f}")
+            # Критерій Спірмена
+            spearman_result = spearman_rank_correlation(X, Y)
+            print(f"A. Критерій Спірмена:")
+            print(f"   Коефіцієнт Спірмена (rho): {spearman_result['rho']:.4f}")
             print(f"   Статистика T: {spearman_result['T']:.4f}")
             print(f"   Критичне значення: {spearman_result['critical_value']:.4f}")
-            print(f"   p-значення: {spearman_result['p_value']:.4f}")
             print(f"   Висновок: {spearman_result['result']}")
             
-            print("\nB. Критерій Кендалла:")
-            kendall_result = kendall_test(X, Y)
-            print(f"   Коефіцієнт кореляції Кендалла (tau): {kendall_result['tau']:.4f}")
+            # Критерій Кендалла
+            kendall_result = kendall_tau_correlation(X, Y)
+            print(f"B. Критерій Кендалла:")
+            print(f"   Коефіцієнт Кендалла (tau): {kendall_result['tau']:.4f}")
             print(f"   Статистика Z: {kendall_result['Z']:.4f}")
             print(f"   Критичне значення: {kendall_result['critical_value']:.4f}")
-            print(f"   p-значення: {kendall_result['p_value']:.4f}")
             print(f"   Висновок: {kendall_result['result']}")
     
     # Завдання 3: Перевірка гіпотези випадковості
