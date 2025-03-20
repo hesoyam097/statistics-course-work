@@ -25,7 +25,7 @@ def generate_uniform_sample(size):
 
 
 # Розміри вибірок для тестування
-sample_sizes = [100, 1000, 10000, 100000]
+sample_sizes = [1000, 10000, 100000]
 
 # Параметри розподілів
 lambda_true = 1
@@ -109,7 +109,7 @@ def chi_square_test(sample, distribution_func, params=None, num_bins=None):
         'num_bins': num_bins
     }
 
-# Завдання 3: Критерій пустих ящиків
+# Виправлена функція empty_boxes_test
 def empty_boxes_test(sample, num_bins=None):
     """
     Перевірка гіпотези за допомогою критерію пустих ящиків
@@ -120,9 +120,9 @@ def empty_boxes_test(sample, num_bins=None):
 
     # Визначаємо кількість інтервалів за формулою
     if num_bins is None:
-        # Розв'язуємо рівняння n/m = ln(m)
-        # Використовуємо наближення m = n/ln(n)
-        num_bins = int(n / np.log(n))
+        # Використовуємо формулу ro = 2, R = n/ro як у прикладі
+        ro = 2
+        num_bins = int(n / ro)
 
     # Обчислюємо межі інтервалів
     bins = np.linspace(0, 1, num_bins + 1)
@@ -134,43 +134,71 @@ def empty_boxes_test(sample, num_bins=None):
     empty_boxes = np.sum(observed == 0)
 
     # Очікувана кількість пустих ящиків для рівномірного розподілу
-    expected_empty = num_bins * (1 - 1/num_bins) ** n
+    # Використовуємо формулу e^(-ro) як у прикладі
+    ro = n / num_bins  # Середня кількість елементів у ящику
+    e_pow_m_ro = math.exp(-ro)
+    expected_empty = num_bins * e_pow_m_ro
 
     # Дисперсія кількості пустих ящиків
-    variance = num_bins * (1 - 1/num_bins) ** n * (1 - (1 - 1/num_bins) ** n - n * (1/num_bins) * (1 - 1/num_bins) ** (n-1))
-
-    # Статистика критерію
-    z = (empty_boxes - expected_empty) / np.sqrt(variance)
+    variance = num_bins * e_pow_m_ro * (1 - (1 + ro) * e_pow_m_ro)
+    
+    # Обчислюємо Z-статистику
+    z_stat = (empty_boxes - expected_empty) / math.sqrt(variance) if variance > 0 else 0
 
     # Критичне значення для рівня значимості alpha
-    critical_value = stats.norm.ppf(1 - alpha/2)
+    z_gamma = stats.norm.ppf(1 - alpha/2)  # Для двостороннього тесту
+
+    # Критичне значення для кількості пустих ящиків
+    critical_value = expected_empty + z_gamma * math.sqrt(variance)
 
     # Перевіряємо гіпотезу
-    reject = abs(z) > critical_value
+    reject = abs(z_stat) > z_gamma
 
     return {
         'empty_boxes': empty_boxes,
         'expected_empty': expected_empty,
-        'z': z,
+        'z_stat': z_stat,  # Змінено ім'я ключа з 'z' на 'z_stat'
         'critical_value': critical_value,
+        'z_gamma': z_gamma,
         'reject': reject,
         'num_bins': num_bins
     }
 
-# Завдання 4: Критерій однорідності Смирнова
+# Виправлена функція Smirnov test
 def smirnov_test(sample1, sample2):
     """
     Перевірка гіпотези однорідності за допомогою критерію Смирнова
     sample1, sample2 - дві вибірки
     """
-    # Використовуємо готову функцію з scipy
+    # Використовуємо функцію з scipy для обчислення статистики
     result = stats.ks_2samp(sample1, sample2)
-
+    
+    n = len(sample1)
+    m = len(sample2)
+    
+    # Обчислюємо емпіричні функції розподілу
+    def ecdf(x, sample):
+        return np.sum(sample <= x) / len(sample)
+    
+    # Об'єднуємо вибірки для обчислення всіх можливих значень
+    combined = np.concatenate((sample1, sample2))
+    combined_sorted = np.sort(combined)
+    
+    # Обчислюємо різницю між емпіричними функціями розподілу
+    differences = np.array([abs(ecdf(x, sample1) - ecdf(x, sample2)) for x in combined_sorted])
+    
+    # Знаходимо максимальну різницю
+    D_mn = np.max(differences)
+    
+    # Критичне значення для рівня значимості alpha
+    critical_value = np.sqrt(-0.5 * np.log(alpha/2) * (1/n + 1/m))
+    
     # Перевіряємо гіпотезу
     reject = result.pvalue < alpha
-
+    
     return {
-        'D': result.statistic,
+        'D': D_mn,
+        'critical_value': critical_value,
         'p_value': result.pvalue,
         'reject': reject
     }
@@ -229,14 +257,14 @@ for n in sample_sizes:
     result_3a = empty_boxes_test(uniform_true)
     print(f"a) H0: F(x) = 1-e^(-{lambda_true}x), коли насправді F(x) = 1-e^(-{lambda_true}x)")
     print(f"   Кількість пустих ящиків = {result_3a['empty_boxes']}, очікувана = {result_3a['expected_empty']:.2f}")
-    print(f"   Z = {result_3a['z']:.4f}, критичне значення = {result_3a['critical_value']:.4f}, кількість інтервалів = {result_3a['num_bins']}")
+    print(f"   Z = {result_3a['z_stat']:.4f}, критичне значення = {result_3a['critical_value']:.4f}, кількість інтервалів = {result_3a['num_bins']}")
     print(f"   Висновок: {'відхиляємо H0' if result_3a['reject'] else 'не відхиляємо H0'}")
 
     # b) H0: F(x) = 1-e^(-3x), коли насправді F(x) = 1-e^(-2x)
     result_3b = empty_boxes_test(uniform_false)
     print(f"b) H0: F(x) = 1-e^(-{lambda_false}x), коли насправді F(x) = 1-e^(-{lambda_true}x)")
     print(f"   Кількість пустих ящиків = {result_3b['empty_boxes']}, очікувана = {result_3b['expected_empty']:.2f}")
-    print(f"   Z = {result_3b['z']:.4f}, критичне значення = {result_3b['critical_value']:.4f}, кількість інтервалів = {result_3b['num_bins']}")
+    print(f"   Z = {result_3a['z_stat']:.4f}, критичне значення = {result_3a['critical_value']:.4f}, кількість інтервалів = {result_3a['num_bins']}")
     print(f"   Висновок: {'відхиляємо H0' if result_3b['reject'] else 'не відхиляємо H0'}")
 
     # Завдання 4: Критерій однорідності Смирнова
@@ -259,7 +287,7 @@ for n in sample_sizes:
     # b) H0: F1(x) = F2(x), коли насправді F1(x) ≠ F2(x)
     result_4b = smirnov_test(sample3, sample4)
     print(f"b) H0: F1(x) = F2(x), коли насправді F1(x) ≠ F2(x)")
-    print(f"   D = {result_4b['D']:.4f}, p-значення = {result_4b['p_value']:.10f}")
+    print(f"   D = {result_4b['D']:.4f}, p-значення = {result_4b['p_value']:.4f}")
     print(f"   Висновок: {'відхиляємо H0' if result_4b['reject'] else 'не відхиляємо H0'}")
 
 # Візуалізація результатів для n = 100
@@ -306,6 +334,3 @@ plt.savefig('results_visualization.png')
 plt.show()
 
 print("\nВізуалізація збережена у файлі 'results_visualization.png'")
-
-# Created/Modified files during execution:
-print("results_visualization.png")
