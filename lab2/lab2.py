@@ -157,7 +157,7 @@ def empty_boxes_test(sample, num_bins=None):
     return {
         'empty_boxes': empty_boxes,
         'expected_empty': expected_empty,
-        'z_stat': z_stat,  # Змінено ім'я ключа з 'z' на 'z_stat'
+        'z_stat': z_stat,  
         'critical_value': critical_value,
         'z_gamma': z_gamma,
         'reject': reject,
@@ -287,7 +287,7 @@ for n in sample_sizes:
     # b) H0: F1(x) = F2(x), коли насправді F1(x) ≠ F2(x)
     result_4b = smirnov_test(sample3, sample4)
     print(f"b) H0: F1(x) = F2(x), коли насправді F1(x) ≠ F2(x)")
-    print(f"   D = {result_4b['D']:.4f}, p-значення = {result_4b['p_value']:.4f}")
+    print(f"   D = {result_4b['D']:.4f}, p-значення = {result_4b['p_value']:.1e}")
     print(f"   Висновок: {'відхиляємо H0' if result_4b['reject'] else 'не відхиляємо H0'}")
 
 # Візуалізація результатів для n = 100
